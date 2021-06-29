@@ -117,11 +117,20 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	image := args[0]
+	tag := ""
+	if n := strings.Count(image, ":"); n > 1 {
+		return fmt.Errorf("Image contains more than 1 colon")
+	} else if n == 1 {
+		image2 := strings.Split(image, ":")
+		image = image2[0]
+		tag = image2[1]
+	}
+
 	output := args[1]
 
-	ociref, err := ocilayout.NewReference(image, "")
+	ociref, err := ocilayout.NewReference(image, tag)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Could not product OCI reference from %s: %w", args[0], err)
 	}
 
 	src, err := ociref.NewImageSource(ctx, &types.SystemContext{})

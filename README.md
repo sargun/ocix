@@ -23,9 +23,9 @@ Example, on ubuntu image:
 
 ```
 # Install gobin: https://github.com/myitcv/gobin
-gobin -run github.com/containers/skopeo/cmd/skopeo@v1.3.0 copy --insecure-policy --override-os linux  docker://docker.io/python@sha256:f42d92068b29045b6893da82032ca4fcf96193be5dcbdcfcba948489efa9e832 oci:python
+gobin -run github.com/containers/skopeo/cmd/skopeo@v1.3.0 copy --insecure-policy --override-os linux  docker://docker.io/python@sha256:f42d92068b29045b6893da82032ca4fcf96193be5dcbdcfcba948489efa9e832 oci:python:test
 
-go run ./cmd/cbormanifest python python.ocix
+go run ./cmd/cbormanifest python:test python.ocix
 # This will generate python.ocix
 ```
 
@@ -34,12 +34,23 @@ We can now inspect `python.ocix`:
 ```
 $ sha256sum python.ocix 
 600f94b4d947d7932185b07e826f506d2f3f5f103f43bb2f6173f9c26deac750  python.ocix
-$ du -h python.ocix 
-1.1M	python.ocix
+$ wc -c python.ocix 
+ 1120268 python.ocix
 $ zstd -9 python.ocix 
 python.ocix          : 21.39%   (1120268 => 239589 bytes, python.ocix.zst)    
-$ du -h python.ocix.zst 
-236K	python.ocix.zst
+$ wc -c python.ocix.zst 
+  239589 python.ocix.zst
+
+# Let's unbundle this image:
+gobin -run github.com/opencontainers/umoci/cmd/umoci@v0.4.7 unpack --image python:test --rootless bundle
+
+$ find bundle/rootfs/ -type f -exec cat {} \;|wc -c
+ 113395561
+$ tar cf rootfs.tar bundle/rootfs/
+$ wc -c rootfs.tar 
+ 115204096 rootfs.tar
+
+# 1808535 bytes of overhead is 1.8MB, putting it in a similar area to 1.1 MB cost of OCIX
 ```
 
 ## Known Problems
