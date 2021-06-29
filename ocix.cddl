@@ -16,8 +16,8 @@ ocix = #6.1868786040({
 filename = tstr
 
 file = {
-    mode: mode,
-    owner: owner,
+    ? mode: mode,
+    ? owner: owner,
     ; Access time
     ? atime: tdate,
     ; Modification time
@@ -69,6 +69,8 @@ $$content //= (
 ; Based on sort order, the lowest valued (according to the canonical CBOR specification:
 ; RFC7049, Section 3 (Canonical CBOR)) filename must be a regular file. All other links
 ; MUST link to that file.
+;
+; Links also do not contain any metadata themselves, and all other values MUST be set to nil.
 ;
 ; Links must always use absolute destinations.
 $$content //= (

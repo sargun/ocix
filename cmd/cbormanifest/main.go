@@ -29,7 +29,8 @@ type OCIX struct {
 }
 
 type File struct {
-	Mode        Mode         `cbor:"mode"`
+	// Links do not have mode
+	Mode        *Mode        `cbor:"mode,omitempty"`
 	Uid         *uint        `cbor:"uid,omitempty"`
 	Gid         *uint        `cbor:"gid,omitempty"`
 	Username    *string      `cbor:"username,omitempty"`
@@ -146,7 +147,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	var rootid uint = 0
 	filesystem := make(map[string]*File)
 	filesystem["/"] = &File{
-		Mode:      Mode{},
+		Mode:      &Mode{},
 		Uid:       &rootid,
 		Gid:       &rootid,
 		Type:      "directory",
@@ -186,7 +187,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	}
 	log.Printf("Writing out filesystem with %d files", len(filesystem))
 
-	f, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(output, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("Could not open output file %q: %w", output, err)
 	}
@@ -218,17 +219,23 @@ func resolveLinks(fs map[string]*File) error {
 		links[realDstFile] = append(sources, path)
 	}
 
-	for f, sources := range links {
+	for _, sources := range links {
 		sort.Slice(sources, func(i, j int) bool {
 			if len(sources[i]) == len(sources[j]) {
 				return sources[i] < sources[j]
 			}
 			return len(sources[i]) < len(sources[j])
 		})
-		fs[sources[0]] = f
+		realfile := fs[sources[0]]
 		for _, source := range sources[1:] {
-			fs[source] = f
+			fs[source] = &File{
+				Link: &Link{
+					Target: sources[0],
+				},
+				Type: "link",
+			}
 		}
+		fs[sources[0]] = realfile
 	}
 
 	return nil
@@ -272,7 +279,7 @@ func addLayer(blob io.ReadCloser, fs map[string]*File) {
 		mode := header.FileInfo().Mode() & os.ModePerm
 
 		f := File{
-			Mode: Mode{
+			Mode: &Mode{
 				User: RWX{
 					Read:    mode&syscall.S_IRUSR > 0,
 					Write:   mode&syscall.S_IWUSR > 0,

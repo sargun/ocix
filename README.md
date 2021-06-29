@@ -33,13 +33,11 @@ We can now inspect `python.ocix`:
 
 ```
 $ sha256sum python.ocix 
-814620d790fe425c45066b4268f9492992c900197a76abfe98cace7e9e26d712  python.ocix
+56d12f4f787dfac0be1b47707e677008294b559d5442ac84d28bb16e7069d0c8  python.ocix
 $ wc -c python.ocix 
- 1120268 python.ocix
+ 1119830 python.ocix
 $ zstd -9 python.ocix 
-python.ocix          : 21.39%   (1120268 => 239589 bytes, python.ocix.zst)    
-$ wc -c python.ocix.zst 
-  239589 python.ocix.zst
+python.ocix          : 21.39%   (1119830 => 239512 bytes, python.ocix.zst)     
 
 # Let's unbundle this image:
 gobin -run github.com/opencontainers/umoci/cmd/umoci@v0.4.7 unpack --image python:test --rootless bundle
