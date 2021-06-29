@@ -1,0 +1,117 @@
+; 1868786040 is "ocix" as an integer
+ocix = #6.1868786040({
+    ; A given version of the spec may use a specific set
+    ; of hash schemes, file layouts, etc.. Therefore in order
+    ; to allow for multiple versions of the schema to exist
+    ; simultaneously, a user can quickly read this as the
+    ; basis of comparison.
+    ; Currently supported versions: 0
+    version: uint,
+    files: {
+        *filename => file,
+    }
+})
+
+; Consider restricting this
+filename = tstr
+
+file = {
+    mode: mode,
+    owner: owner,
+    ; Access time
+    ? atime: tdate,
+    ; Modification time
+    ? mtime: tdate,
+    content: content,
+}
+
+owner = {
+    $$owner,
+}
+
+$$owner //= ()
+
+
+$$owner //= (
+    uid: unsigned,
+    gid: unsigned,
+)
+
+$$owner //= (
+    username: tstr,
+    ? groupname: tstr
+)
+
+content = {
+    $$content,
+}
+
+$$content //= (
+    type: "regularfile",
+    regularfile: [
+        ; A 0 lengthed file may omit the hash.
+        size: uint,
+        ; Blake 3 256-bit hash
+        ? b3-256: bstr .size 256,
+        ; Because this is a vector, it would require
+        ; revving the specification.
+        ;
+        ; TODO: Consider adding new hash types.
+        ; TODO: Consider adding holes.
+    ],
+)
+
+$$content //= (
+    type: "directory",
+    directory: []
+)
+
+$$content //= (
+    type: "link",
+    link: [
+        target: tstr,
+    ]
+)
+
+$$content //= (
+    type: "symlink",
+    symlink: [
+        target: tstr,
+    ]
+)
+
+$$content //= (
+    type: "character",
+    character: [
+        major: uint .le 18446744073709551615,
+        minor: uint .le 18446744073709551615,  
+    ]
+)
+
+$$content //= (
+    type: "block",
+    block: [
+        major: uint .le 18446744073709551615,
+        minor: uint .le 18446744073709551615, 
+    ]
+)
+
+$$content //= (
+    type: "fifo",
+    block: []
+)
+
+rwx = [
+    read: bool,
+    write: bool,
+    execute: bool,
+]
+
+mode = [
+    user: rwx,
+    group: rwx,
+    other: rwx,
+    setuid: bool,
+    setgid: bool,
+    sticky: bool,
+]
