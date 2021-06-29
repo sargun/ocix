@@ -24,29 +24,28 @@ import (
 )
 
 type OCIX struct {
-	Version uint            `cbor:"version"`
+	Version uint             `cbor:"version"`
 	Files   map[string]*File `cbor:"files"`
 }
 
 type File struct {
-	Mode        Mode                    `cbor:"mode"`
-	Uid         *uint                   `cbor:"uid,omitempty"`
-	Gid         *uint                   `cbor:"gid,omitempty"`
-	Username    *string                 `cbor:"username,omitempty"`
-	Groupname   *string                 `cbor:"groupname,omitempty"`
-	Atime       *time.Time              `cbor:"atime,omitempty"`
-	Btime       *time.Time              `cbor:"btime,omitempty"`
-	Ctime       *time.Time              `cbor:"ctime,omitempty"`
-	Mtime       *time.Time              `cbor:"mtime,omitempty"`
-	Xattr       *map[string]interface{} `cbor:"xattr,omitempty"`
-	Type        string                  `cbor:"type"`
-	Regularfile *Regularfile            `cbor:"regularfile,omitempty"`
-	Link        *Link                   `cbor:"link,omitempty"`
-	Directory   *Directory              `cbor:"directory,omitempty"`
-	SymLink     *SymLink                `cbor:"symlink,omitempty"`
-	Character   *Character              `cbor:"character,omitempty"`
-	Block       *Block                  `cbor:"block,omitempty"`
-	Fifo        *Fifo                   `cbor:"fifo,omitempty"`
+	Mode        Mode         `cbor:"mode"`
+	Uid         *uint        `cbor:"uid,omitempty"`
+	Gid         *uint        `cbor:"gid,omitempty"`
+	Username    *string      `cbor:"username,omitempty"`
+	Groupname   *string      `cbor:"groupname,omitempty"`
+	Atime       *time.Time   `cbor:"atime,omitempty"`
+	Btime       *time.Time   `cbor:"btime,omitempty"`
+	Ctime       *time.Time   `cbor:"ctime,omitempty"`
+	Mtime       *time.Time   `cbor:"mtime,omitempty"`
+	Type        string       `cbor:"type"`
+	Regularfile *Regularfile `cbor:"regularfile,omitempty"`
+	Link        *Link        `cbor:"link,omitempty"`
+	Directory   *Directory   `cbor:"directory,omitempty"`
+	SymLink     *SymLink     `cbor:"symlink,omitempty"`
+	Character   *Character   `cbor:"character,omitempty"`
+	Block       *Block       `cbor:"block,omitempty"`
+	Fifo        *Fifo        `cbor:"fifo,omitempty"`
 }
 
 type Mode struct {
@@ -247,7 +246,7 @@ func resolveLink(link *Link, fs map[string]*File) (string, error) {
 	}
 	if dst.Link != nil {
 		f, err := resolveLink(dst.Link, fs)
-		if err != nil  {
+		if err != nil {
 			return "", fmt.Errorf("Could not resolve recursive link to: %q (originally: %q): %w", dst.Link.Target, link.Target, err)
 		}
 		return f, nil
@@ -328,15 +327,6 @@ func addLayer(blob io.ReadCloser, fs map[string]*File) {
 		if !header.ChangeTime.IsZero() {
 			ctime := header.ChangeTime
 			f.Mtime = &ctime
-		}
-
-		if len(header.PAXRecords) > 0 {
-			xattrs := make(map[string]interface{})
-			for key, value := range header.PAXRecords {
-				xattrs[key] = value
-			}
-			f.Xattr = &xattrs
-
 		}
 
 		switch header.Typeflag {
