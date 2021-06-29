@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -24,7 +25,7 @@ import (
 
 type OCIX struct {
 	Version uint            `cbor:"version"`
-	Files   map[string]File `cbor:"files"`
+	Files   map[string]*File `cbor:"files"`
 }
 
 type File struct {
@@ -144,8 +145,8 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	var rootid uint = 0
-	filesystem := make(map[string]File)
-	filesystem["/"] = File{
+	filesystem := make(map[string]*File)
+	filesystem["/"] = &File{
 		Mode:      Mode{},
 		Uid:       &rootid,
 		Gid:       &rootid,
@@ -165,6 +166,11 @@ func runCommand(cmd *cobra.Command, args []string) error {
 		case "application/vnd.oci.image.layer.v1.tar":
 			addLayer(blob, filesystem)
 		}
+	}
+
+	err = resolveLinks(filesystem)
+	if err != nil {
+		return err
 	}
 
 	ts := cbor.NewTagSet()
@@ -194,7 +200,62 @@ func runCommand(cmd *cobra.Command, args []string) error {
 
 }
 
-func addLayer(blob io.ReadCloser, fs map[string]File) {
+func resolveLinks(fs map[string]*File) error {
+	links := make(map[*File][]string)
+	for path, file := range fs {
+		if file.Link == nil {
+			continue
+		}
+		originalFile, err := resolveLink(file.Link, fs)
+		if err != nil {
+			return fmt.Errorf("Could not resolve link from %q: %w", path, err)
+		}
+		realDstFile := fs[originalFile]
+		sources, ok := links[realDstFile]
+		if !ok {
+			sources = []string{originalFile}
+			links[realDstFile] = sources
+		}
+		links[realDstFile] = append(sources, path)
+	}
+
+	for f, sources := range links {
+		sort.Slice(sources, func(i, j int) bool {
+			if len(sources[i]) == len(sources[j]) {
+				return sources[i] < sources[j]
+			}
+			return len(sources[i]) < len(sources[j])
+		})
+		fs[sources[0]] = f
+		for _, source := range sources[1:] {
+			fs[source] = f
+		}
+	}
+
+	return nil
+}
+
+func resolveLink(link *Link, fs map[string]*File) (string, error) {
+	target := link.Target
+	if !strings.HasPrefix(target, "/") {
+		target = "/" + target
+	}
+
+	dst, ok := fs[target]
+	if !ok {
+		return "nil", fmt.Errorf("Could not resolve link to: %q (originally: %q)", target, link.Target)
+	}
+	if dst.Link != nil {
+		f, err := resolveLink(dst.Link, fs)
+		if err != nil  {
+			return "", fmt.Errorf("Could not resolve recursive link to: %q (originally: %q): %w", dst.Link.Target, link.Target, err)
+		}
+		return f, nil
+	}
+	return target, nil
+}
+
+func addLayer(blob io.ReadCloser, fs map[string]*File) {
 	defer blob.Close()
 
 	reader := tar.NewReader(blob)
@@ -327,11 +388,11 @@ func addLayer(blob io.ReadCloser, fs map[string]File) {
 			f.Type = "fifo"
 		}
 		log.Printf("Adding file: %s", header.Name)
-		fs[filepath.Join("/", header.Name)] = f
+		fs[filepath.Join("/", header.Name)] = &f
 	}
 }
 
-func addGZIPLayer(blob io.ReadCloser, fs map[string]File) {
+func addGZIPLayer(blob io.ReadCloser, fs map[string]*File) {
 	defer blob.Close()
 	reader, err := gzip.NewReader(blob)
 	if err != nil {

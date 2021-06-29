@@ -66,6 +66,11 @@ $$content //= (
     directory: []
 )
 
+; Based on sort order, the lowest valued (according to the canonical CBOR specification:
+; RFC7049, Section 3 (Canonical CBOR)) filename must be a regular file. All other links
+; MUST link to that file.
+;
+; Links must always use absolute destinations.
 $$content //= (
     type: "link",
     link: [

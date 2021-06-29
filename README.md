@@ -33,7 +33,7 @@ We can now inspect `python.ocix`:
 
 ```
 $ sha256sum python.ocix 
-600f94b4d947d7932185b07e826f506d2f3f5f103f43bb2f6173f9c26deac750  python.ocix
+814620d790fe425c45066b4268f9492992c900197a76abfe98cace7e9e26d712  python.ocix
 $ wc -c python.ocix 
  1120268 python.ocix
 $ zstd -9 python.ocix 
